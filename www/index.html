@@ -353,6 +353,15 @@
             background-color: #ef4444 !important;
         }
 
+        .calendar-cell.today-flash {
+            animation: todayFlash 0.9s ease;
+        }
+
+        @keyframes todayFlash {
+            0%   { background: var(--primary-color); border-color: var(--primary-color); transform: scale(1.08); }
+            100% { background: rgba(255, 255, 255, 0.7); transform: scale(1); }
+        }
+
         .today-btn-wrapper {
             margin-top: 12px;
             text-align: center;
@@ -374,36 +383,6 @@
             border-radius: 8px;
             font-size: 0.95rem;
             outline: none;
-        }
-
-        /* 문서 작성(회의록) 툴바 스타일 추가 */
-        .editor-toolbar {
-            display: flex;
-            gap: 5px;
-            padding: 6px 10px;
-            background: #f1f5f9;
-            border-bottom: 1px solid var(--border-color);
-            border-top-left-radius: 13px;
-            border-top-right-radius: 13px;
-            flex-wrap: wrap;
-        }
-
-        .tool-btn {
-            background: #ffffff;
-            border: 1px solid var(--border-color);
-            padding: 4px 8px;
-            font-size: 0.8rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            color: #475569;
-            transition: all 0.15s;
-        }
-
-        .tool-btn:hover {
-            background: var(--primary-color);
-            color: #ffffff;
-            border-color: var(--primary-color);
         }
 
         .editor-wrapper {
@@ -855,7 +834,10 @@
                 <div id="calendarWrapper" style="display: flex; flex-direction: column; flex: 1;">
                     <div class="calendar-nav">
                         <button onclick="changeMonth(-1)">◀ 이전달</button>
-                        <span id="calMonthYear">2026년 9월</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span id="calMonthYear">2026년 9월</span>
+                            <button onclick="goToToday()" style="font-size:0.78rem; padding:4px 10px;">오늘</button>
+                        </div>
                         <button onclick="changeMonth(1)">다음달 ▶</button>
                     </div>
 
@@ -890,17 +872,6 @@
 
                 <!-- 에디터 & 폴라로이드 워크스페이스 -->
                 <div class="editor-wrapper">
-                    <!-- 문서 작성을 돕는 번호/기호 삽입 툴바 추가 -->
-                    <div class="editor-toolbar">
-                        <button type="button" class="tool-btn" onclick="insertTextAtCursor('1. ')">1. 번호</button>
-                        <button type="button" class="tool-btn" onclick="insertTextAtCursor('- ')">- 기호</button>
-                        <button type="button" class="tool-btn" onclick="insertTextAtCursor('• ')">• 글머리</button>
-                        <button type="button" class="tool-btn" onclick="insertTextAtCursor('✔️ ')">✔️ 체크</button>
-                        <button type="button" class="tool-btn" onclick="insertTextAtCursor('📌 ')">📌 안건</button>
-                        <button type="button" class="tool-btn" onclick="insertTextAtCursor('💡 ')">💡 아이디어</button>
-                        <button type="button" class="tool-btn" onclick="insertTextAtCursor('💬 ')">💬 논의</button>
-                    </div>
-
                     <!-- 상단: 사진 워크스페이스 -->
                     <div class="workspace" id="workspace"></div>
                     
@@ -995,21 +966,78 @@
             });
         }
 
-        // 문서 작성 툴바에서 기호나 번호 입력 시 에디터 커서 위치에 바로 삽입하는 함수
-        function insertTextAtCursor(text) {
-            const editor = document.getElementById('diaryEditor');
-            editor.focus();
+        // 커서 앞쪽, "현재 줄"의 텍스트만 뽑아낸다 (에디터가 <div>로 줄바꿈하든 아직 줄바꿈 전 텍스트든 둘 다 대응)
+        function getCurrentLineTextBeforeCursor(editor, range) {
+            const preRange = document.createRange();
+            preRange.selectNodeContents(editor);
+            preRange.setEnd(range.startContainer, range.startOffset);
+            const frag = preRange.cloneContents();
+            const children = Array.from(frag.childNodes);
+            if (children.length === 0) return '';
+            const last = children[children.length - 1];
+            if (last.nodeName === 'BR') return '';
+            return last.textContent || '';
+        }
+
+        function handleEditorAutoList(e) {
+            if (e.key !== 'Enter' || e.shiftKey) return;
             const sel = window.getSelection();
-            if (sel.rangeCount > 0) {
-                const range = sel.getRangeAt(0);
-                range.deleteContents();
-                const textNode = document.createTextNode(text);
-                range.insertNode(textNode);
-                range.setStartAfter(textNode);
-                range.collapse(true);
-                sel.removeAllRanges();
-                sel.addRange(range);
+            if (!sel.rangeCount || !sel.getRangeAt(0).collapsed) return;
+
+            const editor = document.getElementById('diaryEditor');
+            const range = sel.getRangeAt(0);
+            const lineText = getCurrentLineTextBeforeCursor(editor, range);
+
+            const numMatch = lineText.match(/^(\d+)\.\s(.*)$/);
+            const dashMatch = lineText.match(/^-\s(.*)$/);
+            const bulletMatch = lineText.match(/^•\s(.*)$/);
+
+            let nextMarker = null;
+            let restContent = '';
+            if (numMatch) { nextMarker = (parseInt(numMatch[1], 10) + 1) + '.\u00A0'; restContent = numMatch[2]; }
+            else if (dashMatch) { nextMarker = '-\u00A0'; restContent = dashMatch[1]; }
+            else if (bulletMatch) { nextMarker = '•\u00A0'; restContent = bulletMatch[1]; }
+
+            if (!nextMarker) return; // 목록 줄이 아니면 기본 동작 그대로
+
+            e.preventDefault();
+
+            // 커서를 담고 있는 "줄" 요소 찾기 (에디터의 직계 자식 - <div> 한 줄 또는 최상단 텍스트노드)
+            let lineEl = range.startContainer;
+            while (lineEl && lineEl.parentNode !== editor && lineEl !== editor) {
+                lineEl = lineEl.parentNode;
             }
+
+            function placeCursorAt(node, offset) {
+                const r = document.createRange();
+                r.setStart(node, offset);
+                r.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(r);
+            }
+
+            if (restContent.trim() === '') {
+                // 내용 없이 엔터 -> 목록에서 빠져나가기 (같은 줄에서 마커만 지움, 새 줄은 안 만듦)
+                if (lineEl === editor) return;
+                if (lineEl.nodeType === 1) {
+                    lineEl.innerHTML = '<br>';
+                    placeCursorAt(lineEl, 0);
+                } else {
+                    lineEl.textContent = '';
+                    placeCursorAt(lineEl, 0);
+                }
+                return;
+            }
+
+            // 다음 줄을 새로 만들고 마커를 넣는다
+            const newDiv = document.createElement('div');
+            newDiv.textContent = nextMarker;
+            if (lineEl === editor) {
+                editor.appendChild(newDiv);
+            } else {
+                lineEl.parentNode.insertBefore(newDiv, lineEl.nextSibling);
+            }
+            placeCursorAt(newDiv.firstChild, nextMarker.length);
         }
 
         window.onload = async () => {
@@ -1019,6 +1047,7 @@
             renderCalendar();
             renderPastelPalette();
             initAutoLock();
+            document.getElementById('diaryEditor').addEventListener('keydown', handleEditorAutoList);
 
             if (appConfig.password) {
                 document.getElementById('lockModal').style.display = 'flex';
@@ -1656,6 +1685,24 @@
             if (calMonth < 0) { calMonth = 11; calYear--; }
             else if (calMonth > 11) { calMonth = 0; calYear++; }
             renderCalendar();
+        }
+
+        function goToToday() {
+            const now = new Date();
+            calYear = now.getFullYear();
+            calMonth = now.getMonth();
+            renderCalendar();
+
+            const todayStr = getTodayString();
+            const cells = document.querySelectorAll('#calendarGrid .calendar-cell:not(.other-month)');
+            cells.forEach(cell => {
+                const d = String(cell.innerText).trim().padStart(2, '0');
+                const dateKey = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${d}`;
+                if (dateKey === todayStr) {
+                    cell.classList.add('today-flash');
+                    setTimeout(() => cell.classList.remove('today-flash'), 900);
+                }
+            });
         }
 
         function renderCalendar() {
