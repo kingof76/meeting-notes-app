@@ -1,0 +1,17 @@
+{
+  "name": "secure-meeting-notes",
+  "version": "1.0.0",
+  "description": "철저한 오프라인 백업 보안 3D 회의록",
+  "scripts": {
+    "sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/filesystem": "^6.0.1",
+    "@capacitor/share": "^6.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}

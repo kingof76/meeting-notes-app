@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>철저한 오프라인 백업 보안 3D 회의록</title>
+    <!-- CryptoJS 암호화 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #eef2f6;
+            --book-bg: #fffdf9;
+            --primary-color: #4a6fa5;
+            --primary-hover: #3b5b8c;
+            --text-color: #334155;
+            --card-bg: #f8fafc;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+            color: var(--text-color);
+        }
+
+        .diary-container {
+            width: 100%;
+            max-width: 850px;
+            height: 90vh;
+            max-height: 800px;
+            display: flex;
+            position: relative;
+        }
+
+        .book {
+            width: 100%;
+            height: 100%;
+            background: var(--book-bg);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: background-color 0.3s ease;
+            box-shadow: 
+                0 15px 35px rgba(0,0,0,0.12),
+                inset 0 0 10px rgba(0,0,0,0.05),
+                0 0 0 4px #d8d8d8,
+                0 0 0 8px #ffffff,
+                0 0 0 10px #bbb;
+        }
+
+        .view-page {
+            width: 100%;
+            height: 100%;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: transparent;
+            transition: opacity 0.2s ease;
+        }
+
+        .view-page.hidden {
+            display: none;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .header.writer-header {
+            align-items: stretch;
+            gap: 8px;
+        }
+
+        .header.writer-header .btn-back,
+        .header.writer-header .weather-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 42px;
+            box-sizing: border-box;
+            white-space: nowrap;
+        }
+
+        .header.writer-header .btn-back {
+            flex: 1.2;
+            text-align: center;
+            padding: 0 8px;
+            font-size: 0.85rem;
+        }
+
+        .header.writer-header .weather-info {
+            flex: 1;
+            text-align: center;
+            padding: 0 8px;
+            font-size: 0.85rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            color: #1e293b;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.3rem;
+            padding: 4px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: rgba(0,0,0,0.05);
+        }
+
+        .btn-back {
+            background: #ffffff;
+            color: var(--primary-color);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+        }
+
+        .btn-back:hover {
+            background: #f1f5f9;
+        }
+
+        .weather-info {
+            font-size: 0.88rem;
+            color: #475569;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            border: 1px solid var(--border-color);
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 35px 10px 14px;
+            border: 1px solid var(--border-color);
+            background: rgba(255,255,255,0.8);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-color);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.15);
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            color: #94a3b8;
+            cursor: pointer;
+            display: none;
+        }
+
+        .search-results-container {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 4px;
+        }
+
+        .search-result-item {
+            background: rgba(255, 255, 255, 0.85);
+            padding: 12px 15px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .search-result-item:hover {
+            background: #ffffff;
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .search-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            font-weight: bold;
+            color: var(--primary-color);
+            font-size: 0.92rem;
+        }
+
+        .search-item-snippet {
+            font-size: 0.88rem;
+            color: #475569;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .search-highlight {
+            background-color: #fef08a;
+            font-weight: bold;
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+
+        .no-results {
+            text-align: center;
+            color: #94a3b8;
+            padding: 40px 0;
+            font-size: 0.95rem;
+        }
+
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-weight: bold;
+            font-size: 1.05rem;
+            color: #1e293b;
+        }
+
+        .calendar-nav button {
+            background: rgba(255,255,255,0.8);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.88rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .calendar-nav button:hover {
+            background: #ffffff;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .calendar-day-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 6px 0;
+            color: #64748b;
+        }
+
+        .calendar-day-name:first-child { color: #ef4444; }
+        .calendar-day-name:last-child { color: #3b82f6; }
+
+        .calendar-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.98rem;
+            border-radius: 10px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            position: relative;
+            transition: all 0.15s ease;
+        }
+
+        .calendar-cell:hover {
+            background: #ffffff;
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        .calendar-cell.other-month {
+            opacity: 0.25;
+            cursor: default;
+        }
+
+        .calendar-cell.future-day {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: rgba(241, 245, 249, 0.5);
+        }
+
+        .calendar-cell.future-day:hover {
+            transform: none;
+            box-shadow: none;
+            border-color: rgba(226, 232, 240, 0.8);
+        }
+
+        .calendar-cell.has-diary::after {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background-color: #10b981;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 6px;
+        }
+
+        .calendar-cell.recent-visited::after {
+            background-color: #ef4444 !important;
+        }
+
+        .today-btn-wrapper {
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        .date-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .date-picker {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        /* 문서 작성(회의록) 툴바 스타일 추가 */
+        .editor-toolbar {
+            display: flex;
+            gap: 5px;
+            padding: 6px 10px;
+            background: #f1f5f9;
+            border-bottom: 1px solid var(--border-color);
+            border-top-left-radius: 13px;
+            border-top-right-radius: 13px;
+            flex-wrap: wrap;
+        }
+
+        .tool-btn {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #475569;
+            transition: all 0.15s;
+        }
+
+        .tool-btn:hover {
+            background: var(--primary-color);
+            color: #ffffff;
+            border-color: var(--primary-color);
+        }
+
+        .editor-wrapper {
+            position: relative;
+            width: 100%;
+            flex: 1;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.5);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .workspace {
+            width: 100%;
+            min-height: 250px;
+            position: relative;
+            overflow: hidden;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+            border-bottom: 1px dashed var(--border-color);
+            flex-shrink: 0;
+            display: none;
+        }
+
+        .diary-editor {
+            width: 100%;
+            min-height: 160px;
+            padding: 14px;
+            font-size: 1rem;
+            line-height: 1.6;
+            outline: none;
+            color: #1e293b;
+            background: linear-gradient(transparent, transparent 27px, rgba(74, 111, 165, 0.08) 28px);
+            background-size: 100% 28px;
+            flex: 1;
+        }
+
+        .polaroid {
+            position: absolute;
+            background: #ffffff;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.06);
+            border-radius: 2px;
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+            transition: box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .polaroid.dragging {
+            cursor: grabbing;
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.22);
+            z-index: 9999 !important;
+        }
+
+        .polaroid-img-wrap {
+            width: 100%;
+            flex: 1;
+            background: #222;
+            overflow: hidden;
+            pointer-events: none;
+            position: relative;
+        }
+
+        .polaroid-img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .polaroid-trash-btn {
+            position: absolute;
+            bottom: 3px;
+            left: 3px;
+            width: 18px;
+            height: 18px;
+            background: rgba(239, 68, 68, 0.85);
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            transition: background-color 0.2s, transform 0.1s;
+            z-index: 10;
+            pointer-events: auto;
+            padding: 0;
+        }
+
+        .polaroid-trash-btn:hover {
+            background: #dc2626;
+            transform: scale(1.15);
+        }
+
+        .polaroid-trash-btn svg {
+            width: 10px;
+            height: 10px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.5;
+        }
+
+        .polaroid-caption-input {
+            margin-top: 8px;
+            height: 22px;
+            font-size: 12px;
+            color: #334155;
+            text-align: center;
+            font-family: inherit;
+            border: 1px dashed transparent;
+            background: transparent;
+            outline: none;
+            width: 100%;
+            border-radius: 4px;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .polaroid-caption-input:hover {
+            border-color: #cbd5e1;
+            background: #f8fafc;
+        }
+
+        .polaroid-caption-input:focus {
+            border-color: var(--primary-color);
+            background: #ffffff;
+        }
+
+        .resize-handle {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            right: 0;
+            bottom: 0;
+            cursor: se-resize;
+            background: linear-gradient(135deg, transparent 50%, #94a3b8 50%);
+            border-bottom-right-radius: 2px;
+        }
+
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 4px rgba(74, 111, 165, 0.2);
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-sub {
+            background: #ffffff;
+            color: #475569;
+            border: 1px solid var(--border-color);
+            box-shadow: none;
+        }
+
+        .btn-sub:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .action-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 12px;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        #lockModal {
+            z-index: 2000;
+        }
+
+        #customAlertModal, 
+        #customConfirmModal {
+            z-index: 3000 !important;
+        }
+
+        .modal-content {
+            background: #ffffff;
+            padding: 12px 16px;
+            border-radius: 16px;
+            width: 420px;
+            max-width: 92%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            animation: modalFadeIn 0.2s ease-out;
+            margin: auto;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-content h3 {
+            font-size: 0.98rem;
+            color: #0f172a;
+            margin-bottom: 6px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .modal-msg {
+            font-size: 0.95rem;
+            color: #334155;
+            text-align: center;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            margin-bottom: 18px;
+        }
+
+        .modal-btn-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 6px;
+        }
+
+        .setting-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+        }
+
+        .setting-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .setting-card-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .setting-card select, 
+        .setting-card input[type="password"] {
+            width: 100%;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 0.8rem;
+            outline: none;
+            background: #fff;
+            color: #334155;
+        }
+
+        .compact-palette {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+            padding: 8px 6px;
+            overflow: visible;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .color-swatch-sm {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid #cbd5e1;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            flex-shrink: 0;
+        }
+
+        .color-swatch-sm:hover { transform: scale(1.1); }
+        .color-swatch-sm.active {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(74, 111, 165, 0.3);
+            transform: scale(1.08);
+        }
+
+        .folder-status {
+            font-size: 0.7rem;
+            color: #ef4444;
+            margin-top: 2px;
+            word-break: break-all;
+            font-weight: 600;
+        }
+        .folder-status.connected {
+            color: #059669;
+        }
+
+        @media (max-width: 600px) {
+            .diary-container { height: 94vh; }
+            .view-page { padding: 16px; }
+            .calendar-cell { font-size: 0.9rem; }
+            .setting-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+    <script src="plugins/capacitor-filesystem.js"></script>
+    <script src="plugins/capacitor-share.js"></script>
+</head>
+<body>
+
+    <!-- 중앙 커스텀 알림 모달 -->
+    <div id="customAlertModal" class="modal" style="display: none;">
+        <div class="modal-content" style="width: 340px;">
+            <div id="alertIcon" style="font-size: 2rem; text-align: center; margin-bottom: 6px;">💡</div>
+            <div id="customAlertMessage" class="modal-msg">알림 메세지 내용</div>
+            <div class="modal-btn-row">
+                <button class="btn" style="width: 100%; padding: 8px;" onclick="closeCustomAlert()">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 중앙 커스텀 Confirm 모달 -->
+    <div id="customConfirmModal" class="modal" style="display: none;">
+        <div class="modal-content" style="width: 380px;">
+            <div style="font-size: 2rem; text-align: center; margin-bottom: 6px;">💬</div>
+            <div id="customConfirmMessage" class="modal-msg">진행하시겠습니까?</div>
+            <div class="modal-btn-row">
+                <button class="btn" style="flex:1; padding: 8px;" id="confirmBtnYes">확인</button>
+                <button class="btn btn-sub" style="flex:1; padding: 8px;" id="confirmBtnNo">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 잠금 모달 -->
+    <div id="lockModal" class="modal" style="display: none;">
+        <div class="modal-content" style="text-align: center; width: 320px;">
+            <div style="font-size: 2.2rem; margin-bottom: 6px;">🔒</div>
+            <h3>회의록 잠금해제</h3>
+            <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 12px;">설정한 비밀번호를 입력해주세요.</p>
+            <input type="password" id="passInput" placeholder="비밀번호 입력" style="width:100%; padding:8px; margin-bottom:12px; border-radius:6px; border:1px solid var(--border-color); text-align:center;" onkeypress="if(event.key==='Enter') checkPassword()">
+            <button class="btn" style="width:100%; padding:8px;" onclick="checkPassword()">확인</button>
+        </div>
+    </div>
+
+    <!-- 설정 모달 -->
+    <div id="settingsModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>⚙️ 회의록 설정</h3>
+            
+            <div class="setting-card">
+                <div class="setting-card-title">📖 회의록 속지 색상</div>
+                <div class="compact-palette" id="pastelPalette"></div>
+            </div>
+
+            <div class="setting-grid">
+                <div class="setting-card">
+                    <div class="setting-card-title">📁 백업 폴더 (자동/수동)</div>
+                    <button class="btn btn-sub" style="width: 100%; padding: 4px; font-size: 0.75rem;" onclick="selectStorageFolder()">📂 백업 폴더 연결하기</button>
+                    <div id="folderStatus" class="folder-status">미연결 (안드로이드는 권한 허용 후 파일 불러오기 병행 지원)</div>
+                </div>
+
+                <div class="setting-card">
+                    <div class="setting-card-title">💾 수동 파일 관리</div>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="btn btn-sub" style="flex:1; font-size: 0.75rem; padding: 4px 2px;" onclick="exportManualFile()">📥 내보내기</button>
+                        <button class="btn btn-sub" style="flex:1; font-size: 0.75rem; padding: 4px 2px;" onclick="document.getElementById('importFileInput').click()">📤 불러오기</button>
+                        <input type="file" id="importFileInput" accept=".enc,.json" style="display: none;" onchange="importEncryptedFile(event)">
+                    </div>
+                </div>
+
+                <div class="setting-card">
+                    <div class="setting-card-title">⏱️ 자동 잠금 시간</div>
+                    <select id="autoLockSelect">
+                        <option value="0">사용 안 함</option>
+                        <option value="1">1분 미조작</option>
+                        <option value="3">3분 미조작</option>
+                        <option value="5">5분 미조작</option>
+                        <option value="10">10분 미조작</option>
+                    </select>
+                </div>
+
+                <div class="setting-card">
+                    <div class="setting-card-title">🔒 비밀번호 설정/변경</div>
+                    <input type="password" id="newPassInput" placeholder="새 비밀번호 입력">
+                </div>
+            </div>
+
+            <div class="setting-card" style="margin-top: 4px;">
+                <div class="setting-card-title" style="color: #ef4444;">🚨 데이터 초기화</div>
+                <button class="btn btn-danger" style="width: 100%; padding: 4px; font-size: 0.78rem;" onclick="resetDiaryData()">🔄 회의록 초기화</button>
+            </div>
+
+            <div style="display: flex; gap: 6px; margin-top: 8px;">
+                <button class="btn" style="flex:1; padding: 6px; font-size: 0.85rem;" onclick="saveSettings()">저장</button>
+                <button class="btn btn-sub" style="flex:1; padding: 6px; font-size: 0.85rem;" onclick="toggleModal('settingsModal', false)">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 메인 컨테이너 -->
+    <div class="diary-container">
+        <div class="book">
+            
+            <!-- [뷰 1] 달력 & 검색 화면 -->
+            <div id="viewCalendar" class="view-page">
+                <div class="header">
+                    <h2>📅 회의록 달력</h2>
+                    <button class="btn-icon" onclick="toggleModal('settingsModal', true)" title="설정">⚙️</button>
+                </div>
+
+                <div class="search-box">
+                    <input type="text" id="searchInput" class="search-input" placeholder="🔍 회의록 내용 검색..." oninput="handleSearch()">
+                    <button id="searchClearBtn" class="search-clear" onclick="clearSearch()">✕</button>
+                </div>
+
+                <div id="calendarWrapper" style="display: flex; flex-direction: column; flex: 1;">
+                    <div class="calendar-nav">
+                        <button onclick="changeMonth(-1)">◀ 이전달</button>
+                        <span id="calMonthYear">2026년 9월</span>
+                        <button onclick="changeMonth(1)">다음달 ▶</button>
+                    </div>
+
+                    <div class="calendar-grid" id="calendarGrid"></div>
+
+                    <div class="today-btn-wrapper">
+                        <button class="btn" onclick="openTodayDiary()">✍️ 오늘 회의록 작성</button>
+                    </div>
+                </div>
+
+                <div id="searchResultsContainer" class="search-results-container" style="display: none;"></div>
+            </div>
+
+            <!-- [뷰 2] 회의록 작성 화면 -->
+            <div id="viewWriter" class="view-page hidden">
+                <div class="header writer-header">
+                    <button class="btn-back" onclick="handleBackToCalendar()">◀ 달력으로 돌아가기</button>
+                    <div class="weather-info" id="weatherInfo">날씨 불러오는 중...</div>
+                </div>
+                
+                <div class="date-row">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-weight:600; color:#475569; font-size: 0.95rem;">날짜:</span>
+                        <input type="date" id="diaryDate" class="date-picker" onchange="loadDiaryDate()">
+                    </div>
+
+                    <div style="display: flex; gap: 6px;">
+                        <button class="btn btn-sub" style="font-size: 0.85rem; padding: 6px 12px;" onclick="document.getElementById('imageInput').click()">📷 사진 추가하기</button>
+                        <input type="file" id="imageInput" accept="image/*" multiple style="display: none;" onchange="handleImageUpload(event)">
+                    </div>
+                </div>
+
+                <!-- 에디터 & 폴라로이드 워크스페이스 -->
+                <div class="editor-wrapper">
+                    <!-- 문서 작성을 돕는 번호/기호 삽입 툴바 추가 -->
+                    <div class="editor-toolbar">
+                        <button type="button" class="tool-btn" onclick="insertTextAtCursor('1. ')">1. 번호</button>
+                        <button type="button" class="tool-btn" onclick="insertTextAtCursor('- ')">- 기호</button>
+                        <button type="button" class="tool-btn" onclick="insertTextAtCursor('• ')">• 글머리</button>
+                        <button type="button" class="tool-btn" onclick="insertTextAtCursor('✔️ ')">✔️ 체크</button>
+                        <button type="button" class="tool-btn" onclick="insertTextAtCursor('📌 ')">📌 안건</button>
+                        <button type="button" class="tool-btn" onclick="insertTextAtCursor('💡 ')">💡 아이디어</button>
+                        <button type="button" class="tool-btn" onclick="insertTextAtCursor('💬 ')">💬 논의</button>
+                    </div>
+
+                    <!-- 상단: 사진 워크스페이스 -->
+                    <div class="workspace" id="workspace"></div>
+                    
+                    <!-- 하단: 글씨 입력 에디터 -->
+                    <div id="diaryEditor" class="diary-editor" contenteditable="true" placeholder="이날의 회의 안건, 논의 사항 및 결정된 내용을 체계적으로 작성해보세요..."></div>
+                </div>
+                
+                <div class="action-bar">
+                    <button class="btn" onclick="saveDiary()">회의록 저장하기</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const pastelColors = [
+            { name: '크림 아이보리', hex: '#fffdf9' },
+            { name: '클래식 화이트', hex: '#ffffff' },
+            { name: '소프트 핑크', hex: '#fff0f3' },
+            { name: '연한 피치', hex: '#fff5eb' },
+            { name: '스카이 블루', hex: '#f0f8ff' },
+            { name: '민트 그린', hex: '#f0fdf4' }
+        ];
+
+        let diaries = {};
+        let appConfig = JSON.parse(localStorage.getItem('my_diary_config') || '{"password":"","bookBg":"#fffdf9","autoLock":"0"}');
+
+        let lastVisitedDate = null;
+        let originalLoadedState = null;
+        let dirHandle = null; 
+        const AUTO_BACKUP_FILENAME = 'meeting_auto_backup.enc';
+
+        function getTodayString() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function initDatePickerLimit() {
+            const dateInput = document.getElementById('diaryDate');
+            if (dateInput) {
+                dateInput.setAttribute('max', getTodayString());
+            }
+        }
+
+        let userLat = 37.5665;
+        let userLon = 126.9780;
+        let calYear = new Date().getFullYear();
+        let calMonth = new Date().getMonth();
+        let currentSelectedWeather = '';
+
+        let tempSelectedBookBg = appConfig.bookBg || '#fffdf9';
+        let autoLockTimer = null;
+
+        const workspace = document.getElementById('workspace');
+        let highestZIndex = 1;
+
+        function showAlert(msg, icon = '💡') {
+            document.getElementById('alertIcon').innerText = icon;
+            document.getElementById('customAlertMessage').innerText = msg;
+            document.getElementById('customAlertModal').style.display = 'flex';
+        }
+
+        function closeCustomAlert() {
+            document.getElementById('customAlertModal').style.display = 'none';
+        }
+
+        function showConfirm(msg) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('customConfirmModal');
+                const msgEl = document.getElementById('customConfirmMessage');
+                const btnYes = document.getElementById('confirmBtnYes');
+                const btnNo = document.getElementById('confirmBtnNo');
+
+                msgEl.innerText = msg;
+                modal.style.display = 'flex';
+
+                const onYes = () => { cleanup(); resolve(true); };
+                const onNo = () => { cleanup(); resolve(false); };
+
+                function cleanup() {
+                    modal.style.display = 'none';
+                    btnYes.removeEventListener('click', onYes);
+                    btnNo.removeEventListener('click', onNo);
+                }
+
+                btnYes.addEventListener('click', onYes);
+                btnNo.addEventListener('click', onNo);
+            });
+        }
+
+        // 문서 작성 툴바에서 기호나 번호 입력 시 에디터 커서 위치에 바로 삽입하는 함수
+        function insertTextAtCursor(text) {
+            const editor = document.getElementById('diaryEditor');
+            editor.focus();
+            const sel = window.getSelection();
+            if (sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                range.deleteContents();
+                const textNode = document.createTextNode(text);
+                range.insertNode(textNode);
+                range.setStartAfter(textNode);
+                range.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        }
+
+        window.onload = async () => {
+            initDatePickerLimit();
+            applyConfig();
+            initLocation();
+            renderCalendar();
+            renderPastelPalette();
+            initAutoLock();
+
+            if (appConfig.password) {
+                document.getElementById('lockModal').style.display = 'flex';
+            }
+            
+            setTimeout(() => {
+                if (!dirHandle) {
+                    showAlert('안녕하세요! 안드로이드 기기에서는 폴더 권한 제약으로 자동 백업 폴더 접근이 제한될 수 있습니다.\n\n안전한 사용을 위해 [설정 ⚙️] 메뉴의 [수동 파일 관리 (내보내기/불러오기)] 기능을 함께 활용해 주세요.', '📁');
+                }
+            }, 500);
+        };
+
+        function updateWorkspaceHeight() {
+            const cards = workspace.querySelectorAll('.polaroid');
+            if (cards.length === 0) {
+                workspace.style.display = 'none';
+                return;
+            }
+            workspace.style.display = 'block';
+            let maxBottom = 250;
+            cards.forEach(card => {
+                const bottom = card.offsetTop + card.offsetHeight + 20;
+                if (bottom > maxBottom) maxBottom = bottom;
+            });
+            workspace.style.height = `${maxBottom}px`;
+        }
+
+        function handleImageUpload(e) {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    createPolaroid(evt.target.result, file.name);
+                };
+                reader.readAsDataURL(file);
+            });
+            e.target.value = '';
+        }
+
+        function createPolaroid(src, title, savedStyle = null) {
+            const card = document.createElement('div');
+            card.className = 'polaroid';
+            
+            if (savedStyle) {
+                card.style.width = savedStyle.width;
+                card.style.height = savedStyle.height;
+                card.style.left = savedStyle.left;
+                card.style.top = savedStyle.top;
+                card.style.transform = savedStyle.transform;
+                card.style.zIndex = savedStyle.zIndex || ++highestZIndex;
+            } else {
+                const defaultWidth = 160;
+                const defaultHeight = 200;
+                const maxX = Math.max(10, workspace.clientWidth - defaultWidth - 30);
+                const maxY = Math.max(10, 250 - defaultHeight - 30);
+                const randomX = Math.max(10, Math.random() * maxX);
+                const randomY = Math.max(10, Math.random() * maxY);
+                const randomRotate = (Math.random() - 0.5) * 12;
+
+                card.style.width = `${defaultWidth}px`;
+                card.style.height = `${defaultHeight}px`;
+                card.style.left = `${randomX}px`;
+                card.style.top = `${randomY}px`;
+                card.style.transform = `rotate(${randomRotate}deg)`;
+                card.style.zIndex = ++highestZIndex;
+            }
+
+            const cleanTitle = title ? title.split('.')[0] : '참고자료';
+
+            card.innerHTML = `
+                <div class="polaroid-img-wrap">
+                    <img src="${src}" alt="photo">
+                    <button type="button" class="polaroid-trash-btn" title="사진 삭제">
+                        <svg viewBox="0 0 24 24">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
+                <input type="text" class="polaroid-caption-input" value="${escapeHtml(cleanTitle)}" placeholder="사진 설명 입력...">
+                <div class="resize-handle"></div>
+            `;
+
+            card.querySelector('.polaroid-trash-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                card.remove();
+                updateWorkspaceHeight();
+            });
+
+            card.querySelector('.polaroid-caption-input').addEventListener('pointerdown', (e) => e.stopPropagation());
+
+            workspace.appendChild(card);
+            initDragAndResize(card);
+            updateWorkspaceHeight();
+        }
+
+        function initDragAndResize(card) {
+            let isDragging = false, isResizing = false;
+            let startX, startY, startLeft, startTop, startWidth, startHeight;
+
+            card.addEventListener('pointerdown', (e) => {
+                if (e.target.closest('.polaroid-trash-btn') || e.target.closest('.polaroid-caption-input')) return;
+                card.style.zIndex = ++highestZIndex;
+
+                if (e.target.classList.contains('resize-handle')) {
+                    isResizing = true;
+                    startX = e.clientX; startY = e.clientY;
+                    startWidth = parseInt(document.defaultView.getComputedStyle(card).width, 10);
+                    startHeight = parseInt(document.defaultView.getComputedStyle(card).height, 10);
+                } else {
+                    isDragging = true;
+                    card.classList.add('dragging');
+                    startX = e.clientX; startY = e.clientY;
+                    startLeft = card.offsetLeft; startTop = card.offsetTop;
+                }
+                card.setPointerCapture(e.pointerId);
+            });
+
+            card.addEventListener('pointermove', (e) => {
+                if (isDragging) {
+                    card.style.left = `${Math.max(0, startLeft + (e.clientX - startX))}px`;
+                    card.style.top = `${Math.max(0, startTop + (e.clientY - startY))}px`;
+                    updateWorkspaceHeight();
+                } else if (isResizing) {
+                    card.style.width = `${Math.max(120, startWidth + (e.clientX - startX))}px`;
+                    card.style.height = `${Math.max(150, startHeight + (e.clientY - startY))}px`;
+                    updateWorkspaceHeight();
+                }
+            });
+
+            const endAction = (e) => {
+                isDragging = false; isResizing = false;
+                card.classList.remove('dragging');
+                try { card.releasePointerCapture(e.pointerId); } catch (err) {}
+            };
+            card.addEventListener('pointerup', endAction);
+            card.addEventListener('pointercancel', endAction);
+        }
+
+        const GET_ENCRYPTION_KEY = () => appConfig.password || 'DEFAULT_MEETING_KEY_2026';
+
+        function encryptData(dataString) {
+            return CryptoJS.AES.encrypt(dataString, GET_ENCRYPTION_KEY()).toString();
+        }
+
+        function decryptData(encryptedString, customKey) {
+            try {
+                const bytes = CryptoJS.AES.decrypt(encryptedString, customKey || GET_ENCRYPTION_KEY());
+                const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
+                return decryptedStr ? JSON.parse(decryptedStr) : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        async function selectStorageFolder() {
+            if ('showDirectoryPicker' in window) {
+                try {
+                    dirHandle = await window.showDirectoryPicker();
+                    
+                    const statusEl = document.getElementById('folderStatus');
+                    statusEl.innerText = `📁 연결됨: [${dirHandle.name}]`;
+                    statusEl.classList.add('connected');
+                    
+                    try {
+                        const fileHandle = await dirHandle.getFileHandle(AUTO_BACKUP_FILENAME, { create: false });
+                        const file = await fileHandle.getFile();
+                        const content = await file.text();
+                        let decrypted = decryptData(content);
+                        if (!decrypted && appConfig.password) {
+                            const pass = prompt('연결된 백업 파일의 암호가 필요합니다. 비밀번호를 입력해주세요:');
+                            if (pass) decrypted = decryptData(content, pass);
+                        }
+                        if (decrypted) {
+                            diaries = decrypted;
+                            cleanFutureDiaries();
+                            renderCalendar();
+                            showAlert('연결된 백업 폴더에서 기존 회의록 데이터를 성공적으로 불러왔습니다.', '📂');
+                        }
+                    } catch (err) {
+                        await saveEncryptedToFileSystem();
+                    }
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        showAlert('안드로이드 브라우저 환경에서는 폴더 접근 권한 제약이나 권한 거부(NotAllowedError)로 인해 폴더 연결이 반복될 수 있습니다.\n\n이 경우 [수동 파일 관리]의 [내보내기/불러오기] 기능을 이용하시면 안전하게 데이터를 백업하고 복원하실 수 있습니다.', '💡');
+                    }
+                }
+            } else {
+                showAlert('현재 브라우저는 폴더 직접 연결을 지원하지 않습니다. 수동 파일 관리(내보내기/불러오기)를 이용해 주세요.', '⚠️');
+            }
+        }
+
+        async function saveEncryptedToFileSystem() {
+            if (!dirHandle) return false;
+            try {
+                const fileHandle = await dirHandle.getFileHandle(AUTO_BACKUP_FILENAME, { create: true });
+                const writable = await fileHandle.createWritable();
+                const encrypted = encryptData(JSON.stringify(diaries));
+                await writable.write(encrypted);
+                await writable.close();
+                return true;
+            } catch (err) {
+                console.error('백업 폴더 저장 실패:', err);
+                return false;
+            }
+        }
+
+        async function exportManualFile() {
+            const encrypted = encryptData(JSON.stringify(diaries));
+            const timestamp = new Date().toISOString().replace(/[:T]/g, '-').split('.')[0];
+            const fileName = `meeting_manual_backup_${timestamp}.enc`;
+
+            if (dirHandle) {
+                try {
+                    const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(encrypted);
+                    await writable.close();
+                    showAlert(`내보내기 파일이 연결된 백업 폴더([${dirHandle.name}])에 다운로드 없이 단일 파일로 안전하게 저장되었습니다!`, '📥');
+                    return;
+                } catch (err) {
+                    console.error('백업 폴더 내보내기 저장 실패:', err);
+                }
+            }
+
+            const isNative = window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform();
+            if (isNative) {
+                try {
+                    const Filesystem = window.Capacitor.Plugins.Filesystem;
+                    const Share = window.Capacitor.Plugins.Share;
+                    const DirectoryEnum = (window.capacitorFilesystem && window.capacitorFilesystem.Directory) || { Cache: 'CACHE' };
+                    const EncodingEnum = (window.capacitorFilesystem && window.capacitorFilesystem.Encoding) || { UTF8: 'utf8' };
+
+                    const result = await Filesystem.writeFile({
+                        path: fileName,
+                        data: encrypted,
+                        directory: DirectoryEnum.Cache,
+                        encoding: EncodingEnum.UTF8
+                    });
+
+                    await Share.share({
+                        title: '회의록 백업 파일',
+                        text: '암호화된 회의록 백업 파일입니다.',
+                        url: result.uri,
+                        dialogTitle: '백업 파일을 저장할 위치를 선택하세요'
+                    });
+                    showAlert('저장 위치 선택 창이 열립니다. 거기서 "파일에 저장" 또는 "다운로드"를 고르시면 원하는 폴더를 직접 선택해서 저장할 수 있습니다.', '📥');
+                } catch (err) {
+                    console.error('네이티브 공유 저장 실패:', err);
+                    showAlert('백업 파일 저장 중 오류가 발생했습니다.\n' + (err && err.message ? err.message : err));
+                }
+                return;
+            }
+
+            const blob = new Blob([encrypted], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            URL.revokeObjectURL(url);
+            showAlert('내보내기 파일이 다운로드되었습니다. (백업 폴더를 연결하시면 다운로드 창 없이 지정 폴더에만 바로 저장할 수 있습니다.)', '📥');
+        }
+
+        function importEncryptedFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const content = e.target.result;
+                let decrypted = decryptData(content);
+
+                if (!decrypted) {
+                    const pass = prompt('백업 파일 암호를 해독하기 위한 비밀번호를 입력해주세요:');
+                    if (pass !== null) decrypted = decryptData(content, pass);
+                }
+
+                if (decrypted) {
+                    diaries = decrypted;
+                    cleanFutureDiaries();
+                    if (dirHandle) await saveEncryptedToFileSystem();
+                    renderCalendar();
+                    showAlert('백업 파일을 성공적으로 불러왔습니다!', '🎉');
+                } else {
+                    showAlert('파일 해독에 실패했습니다. 비밀번호를 확인해주세요.', '❌');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function cleanFutureDiaries() {
+            const todayStr = getTodayString();
+            let hasFuture = false;
+            Object.keys(diaries).forEach(dateKey => {
+                if (dateKey > todayStr) { delete diaries[dateKey]; hasFuture = true; }
+            });
+            if (hasFuture && dirHandle) saveEncryptedToFileSystem();
+        }
+
+        async function resetDiaryData() {
+            toggleModal('settingsModal', false);
+            const confirmReset = await showConfirm("회의록을 초기화하시겠습니까?\n모든 데이터가 삭제되며 되돌릴 수 없습니다.");
+            if (!confirmReset) {
+                toggleModal('settingsModal', true);
+                return;
+            }
+
+            const shouldBackup = await showConfirm("초기화 전 수동 백업 파일을 다운로드하시겠습니까?");
+            if (shouldBackup) exportManualFile();
+
+            diaries = {};
+            if (dirHandle) await saveEncryptedToFileSystem();
+
+            appConfig = { password: "", bookBg: "#fffdf9", autoLock: "0" };
+            localStorage.setItem('my_diary_config', JSON.stringify(appConfig));
+            applyConfig();
+            renderCalendar();
+            showView('calendar');
+            showAlert('회의록이 초기화되었습니다.', '✨');
+        }
+
+        function initAutoLock() {
+            const events = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'];
+            events.forEach(evt => window.addEventListener(evt, resetAutoLockTimer, true));
+            resetAutoLockTimer();
+        }
+
+        function resetAutoLockTimer() {
+            if (autoLockTimer) clearTimeout(autoLockTimer);
+            const lockMinutes = parseInt(appConfig.autoLock || 0, 10);
+            if (lockMinutes > 0) {
+                autoLockTimer = setTimeout(() => lockScreen(), lockMinutes * 60 * 1000);
+            }
+        }
+
+        function lockScreen() {
+            const lockModal = document.getElementById('lockModal');
+            if (lockModal.style.display !== 'flex') {
+                document.getElementById('passInput').value = '';
+                lockModal.style.display = 'flex';
+            }
+        }
+
+        function checkPassword() {
+            const input = document.getElementById('passInput').value;
+            if (!appConfig.password || input === appConfig.password) {
+                document.getElementById('lockModal').style.display = 'none';
+                resetAutoLockTimer();
+            } else {
+                showAlert('비밀번호가 일치하지 않습니다.', '🔒');
+            }
+        }
+
+        function renderPastelPalette() {
+            const container = document.getElementById('pastelPalette');
+            container.innerHTML = '';
+            pastelColors.forEach(color => {
+                const swatch = document.createElement('div');
+                swatch.className = 'color-swatch-sm';
+                swatch.style.backgroundColor = color.hex;
+                swatch.title = color.name;
+                if (color.hex.toLowerCase() === tempSelectedBookBg.toLowerCase()) swatch.classList.add('active');
+                swatch.onclick = () => {
+                    document.querySelectorAll('.color-swatch-sm').forEach(s => s.classList.remove('active'));
+                    swatch.classList.add('active');
+                    tempSelectedBookBg = color.hex;
+                    document.documentElement.style.setProperty('--book-bg', color.hex);
+                };
+                container.appendChild(swatch);
+            });
+        }
+
+        function showView(viewName) {
+            const calendarView = document.getElementById('viewCalendar');
+            const writerView = document.getElementById('viewWriter');
+            if (viewName === 'writer') {
+                calendarView.classList.add('hidden');
+                writerView.classList.remove('hidden');
+            } else {
+                writerView.classList.add('hidden');
+                calendarView.classList.remove('hidden');
+                renderCalendar();
+                if (document.getElementById('searchInput').value.trim() !== '') handleSearch();
+            }
+        }
+
+        function openTodayDiary() {
+            selectDateAndOpenWriter(getTodayString());
+        }
+
+        function selectDateAndOpenWriter(dateStr) {
+            if (dateStr > getTodayString()) {
+                showAlert('미래 날짜에는 회의록을 작성할 수 없습니다.', '🚫');
+                return;
+            }
+            lastVisitedDate = dateStr;
+            document.getElementById('diaryDate').value = dateStr;
+            loadDiaryDate(dateStr);
+            showView('writer');
+        }
+
+        function getCurrentEditorState() {
+            const textContent = document.getElementById('diaryEditor').innerHTML;
+            const photoCards = Array.from(workspace.querySelectorAll('.polaroid'));
+            const photosData = photoCards.map(card => ({
+                src: card.querySelector('img').src,
+                title: card.querySelector('.polaroid-caption-input').value,
+                style: {
+                    width: card.style.width, height: card.style.height,
+                    left: card.style.left, top: card.style.top,
+                    transform: card.style.transform, zIndex: card.style.zIndex
+                }
+            }));
+            return JSON.stringify({ text: textContent, photos: photosData });
+        }
+
+        async function handleBackToCalendar() {
+            const currentState = getCurrentEditorState();
+            if (currentState === originalLoadedState) {
+                showView('calendar');
+                return;
+            }
+
+            const hasText = stripHtml(document.getElementById('diaryEditor').innerHTML).trim() !== '';
+            const hasPhotos = workspace.querySelectorAll('.polaroid').length > 0;
+
+            if (hasText || hasPhotos) {
+                const confirmSave = await showConfirm("작성 중인 내용이 있습니다. 저장하고 달력으로 이동하시겠습니까?");
+                if (confirmSave) {
+                    await saveDiary();
+                } else {
+                    const discard = await showConfirm("변경 사항을 저장하지 않고 돌아가시겠습니까?");
+                    if (discard) showView('calendar');
+                }
+            } else {
+                showView('calendar');
+            }
+        }
+
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            const calWrapper = document.getElementById('calendarWrapper');
+            const resultsContainer = document.getElementById('searchResultsContainer');
+            const clearBtn = document.getElementById('searchClearBtn');
+
+            if (query === '') {
+                clearBtn.style.display = 'none';
+                calWrapper.style.display = 'flex';
+                resultsContainer.style.display = 'none';
+                return;
+            }
+
+            clearBtn.style.display = 'block';
+            calWrapper.style.display = 'none';
+            resultsContainer.style.display = 'flex';
+            resultsContainer.innerHTML = '';
+
+            const lowerQuery = query.toLowerCase();
+            const matchedDates = Object.keys(diaries).filter(date => {
+                const entry = diaries[date];
+                const rawContent = (typeof entry === 'string' ? entry : (entry.text || entry.content || ''));
+                return stripHtml(rawContent).toLowerCase().includes(lowerQuery);
+            }).sort().reverse();
+
+            if (matchedDates.length === 0) {
+                resultsContainer.innerHTML = '<div class="no-results">🔍 검색 결과가 없습니다.</div>';
+                return;
+            }
+
+            matchedDates.forEach(date => {
+                const entry = diaries[date];
+                const rawContent = typeof entry === 'string' ? entry : (entry.text || entry.content || '');
+                const weather = (typeof entry === 'object' && entry.weather) ? entry.weather : '';
+                const plainText = stripHtml(rawContent);
+                const highlightedText = escapeHtml(plainText).replace(new RegExp(`(${escapeRegExp(query)})`, 'gi'), '<span class="search-highlight">$1</span>');
+
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.innerHTML = `
+                    <div class="search-item-header"><span>📅 ${date}</span><span>${weather}</span></div>
+                    <div class="search-item-snippet">${highlightedText}</div>
+                `;
+                item.onclick = () => selectDateAndOpenWriter(date);
+                resultsContainer.appendChild(item);
+            });
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            handleSearch();
+        }
+
+        function stripHtml(html) {
+            const tmp = document.createElement('DIV');
+            tmp.innerHTML = html;
+            return tmp.textContent || tmp.innerText || '';
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function initLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    userLat = pos.coords.latitude;
+                    userLon = pos.coords.longitude;
+                });
+            }
+        }
+
+        function loadDiaryDate(targetDate) {
+            const today = getTodayString();
+            let dateStr = targetDate || document.getElementById('diaryDate').value;
+            if (dateStr > today) dateStr = today;
+            document.getElementById('diaryDate').value = dateStr;
+
+            const entry = diaries[dateStr];
+            const editor = document.getElementById('diaryEditor');
+            workspace.querySelectorAll('.polaroid').forEach(el => el.remove());
+
+            if (typeof entry === 'string') {
+                editor.innerHTML = entry;
+                fetchWeatherForDate(dateStr);
+            } else if (entry && typeof entry === 'object') {
+                editor.innerHTML = entry.text || '';
+                if (entry.weather) {
+                    document.getElementById('weatherInfo').innerText = entry.weather;
+                    currentSelectedWeather = entry.weather;
+                } else {
+                    fetchWeatherForDate(dateStr);
+                }
+                if (entry.photos && Array.isArray(entry.photos)) {
+                    entry.photos.forEach(p => createPolaroid(p.src, p.title, p.style));
+                }
+            } else {
+                editor.innerHTML = '';
+                fetchWeatherForDate(dateStr);
+            }
+            updateWorkspaceHeight();
+            originalLoadedState = getCurrentEditorState();
+        }
+
+        async function fetchWeatherForDate(dateStr) {
+            if (dateStr > getTodayString()) {
+                document.getElementById('weatherInfo').innerText = '☀️ 날씨 정보 없음';
+                currentSelectedWeather = '☀️ 날씨 정보 없음';
+                return;
+            }
+            const weatherEl = document.getElementById('weatherInfo');
+            weatherEl.innerText = '날씨 조회 중...';
+            let url = `https://archive-api.open-meteo.com/v1/archive?latitude=${userLat}&longitude=${userLon}&start_date=${dateStr}&end_date=${dateStr}&daily=weathercode,temperature_2m_max&timezone=auto`;
+
+            try {
+                let res = await fetch(url);
+                let data = await res.json();
+                if (!data.daily || !data.daily.weathercode) {
+                    url = `https://api.open-meteo.com/v1/forecast?latitude=${userLat}&longitude=${userLon}&start_date=${dateStr}&end_date=${dateStr}&daily=weathercode,temperature_2m_max&timezone=auto`;
+                    res = await fetch(url);
+                    data = await res.json();
+                }
+                if (data.daily && data.daily.weathercode && data.daily.weathercode[0] !== undefined) {
+                    const code = data.daily.weathercode[0];
+                    const temp = Math.round(data.daily.temperature_2m_max[0]);
+                    const wText = `${getWeatherIcon(code)} ${temp}°C`;
+                    weatherEl.innerText = wText;
+                    currentSelectedWeather = wText;
+                } else {
+                    weatherEl.innerText = '☀️ 22°C';
+                    currentSelectedWeather = '☀️ 22°C';
+                }
+            } catch (err) {
+                weatherEl.innerText = '☀️ 22°C';
+                currentSelectedWeather = '☀️ 22°C';
+            }
+        }
+
+        function getWeatherIcon(code) {
+            if (code === 0) return '☀️ 맑음';
+            if (code <= 3) return '⛅ 구름조금';
+            if (code <= 65) return '🌧️ 비';
+            if (code <= 77) return '❄️ 눈';
+            return '🌤️ 적당함';
+        }
+
+        async function saveDiary() {
+            const date = document.getElementById('diaryDate').value;
+            const textContent = document.getElementById('diaryEditor').innerHTML;
+            const today = getTodayString();
+
+            if (!date || date > today) {
+                showAlert('올바른 날짜를 선택해 주세요.', '📅');
+                return;
+            }
+
+            const photoCards = Array.from(workspace.querySelectorAll('.polaroid'));
+            const photosData = photoCards.map(card => ({
+                src: card.querySelector('img').src,
+                title: card.querySelector('.polaroid-caption-input').value,
+                style: {
+                    width: card.style.width, height: card.style.height,
+                    left: card.style.left, top: card.style.top,
+                    transform: card.style.transform, zIndex: card.style.zIndex
+                }
+            }));
+
+            if (stripHtml(textContent).trim() === '' && photosData.length === 0) {
+                delete diaries[date];
+            } else {
+                diaries[date] = {
+                    text: textContent,
+                    weather: currentSelectedWeather || document.getElementById('weatherInfo').innerText,
+                    photos: photosData
+                };
+            }
+
+            if (dirHandle) {
+                await saveEncryptedToFileSystem();
+            }
+
+            showAlert('회의록이 저장되었습니다!', '✅');
+            showView('calendar');
+        }
+
+        function changeMonth(delta) {
+            calMonth += delta;
+            if (calMonth < 0) { calMonth = 11; calYear--; }
+            else if (calMonth > 11) { calMonth = 0; calYear++; }
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            document.getElementById('calMonthYear').innerText = `${calYear}년 ${calMonth + 1}월`;
+            const gridEl = document.getElementById('calendarGrid');
+            gridEl.innerHTML = '';
+
+            const todayStr = getTodayString();
+            ['일', '월', '화', '수', '목', '금', '토'].forEach(d => {
+                const dayHead = document.createElement('div');
+                dayHead.className = 'calendar-day-name';
+                dayHead.innerText = d;
+                gridEl.appendChild(dayHead);
+            });
+
+            const firstDay = new Date(calYear, calMonth, 1).getDay();
+            const lastDate = new Date(calYear, calMonth + 1, 0).getDate();
+            const prevLastDate = new Date(calYear, calMonth, 0).getDate();
+
+            for (let i = firstDay - 1; i >= 0; i--) {
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell other-month';
+                cell.innerText = prevLastDate - i;
+                gridEl.appendChild(cell);
+            }
+
+            for (let d = 1; d <= lastDate; d++) {
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell';
+                const dateKey = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                cell.innerText = d;
+
+                if (diaries[dateKey]) cell.classList.add('has-diary');
+                if (lastVisitedDate && dateKey === lastVisitedDate) cell.classList.add('recent-visited');
+
+                if (dateKey > todayStr) {
+                    cell.classList.add('future-day');
+                    cell.onclick = () => showAlert('미래 날짜에는 회의록을 작성할 수 없습니다.', '🚫');
+                } else {
+                    cell.onclick = () => selectDateAndOpenWriter(dateKey);
+                }
+                gridEl.appendChild(cell);
+            }
+
+            const totalCells = firstDay + lastDate;
+            const remaining = (totalCells > 35 ? 42 : 35) - totalCells;
+            for (let i = 1; i <= remaining; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell other-month';
+                cell.innerText = i;
+                gridEl.appendChild(cell);
+            }
+        }
+
+        function toggleModal(id, show) {
+            document.getElementById(id).style.display = show ? 'flex' : 'none';
+            if (show && id === 'settingsModal') {
+                document.getElementById('autoLockSelect').value = appConfig.autoLock || "0";
+                tempSelectedBookBg = appConfig.bookBg || '#fffdf9';
+                renderPastelPalette();
+            } else if (!show && id === 'settingsModal') {
+                applyConfig();
+            }
+        }
+
+        function saveSettings() {
+            const newPass = document.getElementById('newPassInput').value;
+            const autoLockVal = document.getElementById('autoLockSelect').value;
+
+            appConfig.bookBg = tempSelectedBookBg;
+            appConfig.autoLock = autoLockVal;
+            if (newPass !== "") appConfig.password = newPass;
+
+            localStorage.setItem('my_diary_config', JSON.stringify(appConfig));
+            applyConfig();
+            resetAutoLockTimer();
+
+            if (dirHandle) saveEncryptedToFileSystem();
+
+            showAlert('설정이 저장되었습니다.', '⚙️');
+            toggleModal('settingsModal', false);
+        }
+
+        function applyConfig() {
+            if (appConfig.bookBg) {
+                document.documentElement.style.setProperty('--book-bg', appConfig.bookBg);
+            }
+        }
+    </script>
+</body>
+</html>
