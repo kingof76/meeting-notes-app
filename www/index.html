@@ -744,8 +744,6 @@
             .setting-grid { grid-template-columns: 1fr; }
         }
     </style>
-    <script src="plugins/capacitor-filesystem.js"></script>
-    <script src="plugins/capacitor-share.js"></script>
 </head>
 <body>
 
@@ -805,7 +803,7 @@
                     <div style="display: flex; gap: 4px;">
                         <button class="btn btn-sub" style="flex:1; font-size: 0.75rem; padding: 4px 2px;" onclick="exportManualFile()">📥 내보내기</button>
                         <button class="btn btn-sub" style="flex:1; font-size: 0.75rem; padding: 4px 2px;" onclick="document.getElementById('importFileInput').click()">📤 불러오기</button>
-                        <input type="file" id="importFileInput" accept=".enc,.json" style="display: none;" onchange="importEncryptedFile(event)">
+                        <input type="file" id="importFileInput" style="display: none;" onchange="importEncryptedFile(event)">
                     </div>
                 </div>
 
@@ -1177,6 +1175,11 @@
         }
 
         async function selectStorageFolder() {
+            const isNative = window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform();
+            if (isNative) {
+                showAlert('안드로이드 앱에서는 폴더를 미리 연결해서 자동 저장하는 기능이 지원되지 않습니다.\n\n대신 [수동 파일 관리]의 [내보내기]를 누르시면, 내보낼 때마다 저장 위치를 직접 선택할 수 있습니다.', '💡');
+                return;
+            }
             if ('showDirectoryPicker' in window) {
                 try {
                     dirHandle = await window.showDirectoryPicker();
@@ -1251,14 +1254,12 @@
                 try {
                     const Filesystem = window.Capacitor.Plugins.Filesystem;
                     const Share = window.Capacitor.Plugins.Share;
-                    const DirectoryEnum = (window.capacitorFilesystem && window.capacitorFilesystem.Directory) || { Cache: 'CACHE' };
-                    const EncodingEnum = (window.capacitorFilesystem && window.capacitorFilesystem.Encoding) || { UTF8: 'utf8' };
 
                     const result = await Filesystem.writeFile({
                         path: fileName,
                         data: encrypted,
-                        directory: DirectoryEnum.Cache,
-                        encoding: EncodingEnum.UTF8
+                        directory: 'CACHE',
+                        encoding: 'utf8'
                     });
 
                     await Share.share({
